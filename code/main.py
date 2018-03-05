@@ -97,6 +97,15 @@ def initialize_model(session, model, train_dir, expect_exists):
             session.run(tf.global_variables_initializer())
             print 'Num params: %d' % sum(v.get_shape().num_elements() for v in tf.trainable_variables())
 
+def experiment_name():
+  hparams = 'lr{}-nrm{}-drp{}-bs{}-hid{}-ctx{}-ql{}-emb{}'.format(
+      FLAGS.learning_rate, FLAGS.max_gradient_norm, FLAGS.dropout,
+      FLAGS.batch_size, FLAGS.hidden_size, FLAGS.context_len,
+      FLAGS.question_len, FLAGS.embedding_size)
+  if not FLAGS.experiment_name:
+    return hparams
+  return '{}-{}'.format(FLAGS.experiment_name, hparams)
+
 
 def main(unused_argv):
     # Print an error message if you've entered flags incorrectly
@@ -111,9 +120,8 @@ def main(unused_argv):
     print "This code was developed and tested on TensorFlow 1.4.1. Your TensorFlow version: %s" % tf.__version__
 
     # Define train_dir
-    if not FLAGS.experiment_name and not FLAGS.train_dir and FLAGS.mode != "official_eval":
-        raise Exception("You need to specify either --experiment_name or --train_dir")
-    FLAGS.train_dir = FLAGS.train_dir or os.path.join(EXPERIMENTS_DIR, FLAGS.experiment_name)
+    FLAGS.train_dir = FLAGS.train_dir or os.path.join(EXPERIMENTS_DIR,
+        experiment_name())
 
     # Initialize bestmodel directory
     bestmodel_dir = os.path.join(FLAGS.train_dir, "best_checkpoint")
