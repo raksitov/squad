@@ -510,7 +510,7 @@ class QAModel(object):
 
 
                     # Early stopping based on dev F1.
-                    if best_dev_f1 is None or dev_em > best_dev_f1:
+                    if best_dev_f1 is None or dev_f1 > best_dev_f1:
                         best_dev_f1 = dev_f1
                         logging.info("Saving to %s..." % bestmodel_ckpt_path)
                         self.bestmodel_saver.save(session, bestmodel_ckpt_path, global_step=global_step)
