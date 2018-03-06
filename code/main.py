@@ -104,7 +104,7 @@ def experiment_name():
       FLAGS.question_len, FLAGS.embedding_size)
   if not FLAGS.experiment_name:
     return hparams
-  return '{}-{}'.format(FLAGS.experiment_name, hparams)
+  return FLAGS.experiment_name
 
 
 def main(unused_argv):
