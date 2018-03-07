@@ -299,8 +299,11 @@ class QAModel(object):
         # Take argmax to get start_pos and end_post, both shape (batch_size)
         start_pos = np.argmax(start_dist, axis=1)
         if self.FLAGS.prevent_end_before_start:
-          mask = np.arange(len(start_dist[0])).reshape(1, -1) >= start_pos.reshape(-1, 1)
-          end_pos = np.argmax(np.where(mask, end_dist, -1), axis=1)
+          mask_base = np.arange(len(start_dist[0])).reshape(1, -1)
+          mask_pos = start_pos.reshape(-1, 1)
+          mask_start = mask_base >= mask_pos
+          mask_end = mask_base <= mask_pos + (self.FLAGS.answer_len - 1)
+          end_pos = np.argmax(np.where(mask_start & mask_end, end_dist, -1), axis=1)
         else:
           end_pos = np.argmax(end_dist, axis=1)
 
