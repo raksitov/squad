@@ -55,6 +55,7 @@ tf.app.flags.DEFINE_integer("h_answer_len", 15, "The maximum answer length of yo
 
 # Addons
 tf.app.flags.DEFINE_bool("prevent_end_before_start", True, "Prevents malformed spans from happening")
+tf.app.flags.DEFINE_string("experiments_results", os.path.join(DEFAULT_DATA_DIR, 'experiments_results.json'), "Results of completed experiments")
 
 # How often to print, save, eval
 tf.app.flags.DEFINE_integer("print_every", 1, "How many iterations to do per print.")

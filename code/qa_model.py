@@ -21,6 +21,7 @@ import time
 import logging
 import os
 import sys
+import json
 
 import numpy as np
 import tensorflow as tf
@@ -534,8 +535,11 @@ class QAModel(object):
             epoch_toc = time.time()
             logging.info("End of epoch %i. Time for epoch: %f" % (epoch, epoch_toc-epoch_tic))
 
-        sys.stdout.flush()
+        with open(self.FLAGS.experiments_results, 'a') as writer:
+          json.dump(best_dev_f1, writer)
+          writer.write('\n')
 
+        sys.stdout.flush()
 
 
 def write_summary(value, tag, summary_writer, global_step):
