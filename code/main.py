@@ -23,6 +23,8 @@ import json
 import sys
 import logging
 
+import util
+
 import tensorflow as tf
 
 from qa_model import QAModel
@@ -101,18 +103,6 @@ def initialize_model(session, model, train_dir, expect_exists):
             session.run(tf.global_variables_initializer())
             print 'Num params: %d' % sum(v.get_shape().num_elements() for v in tf.trainable_variables())
 
-def hparams_to_str():
-  hparams_names = [name for name in sorted(tf.flags.FLAGS.__flags.keys()) if
-      name.startswith('h_')]
-  ordered_values = [str(tf.flags.FLAGS.__flags[name]) for name in hparams_names]
-  return ':'.join(ordered_values)
-
-def experiment_name():
-  if FLAGS.experiment_name:
-    return FLAGS.experiment_name
-  return hparams_to_str()
-
-
 def main(unused_argv):
     # Print an error message if you've entered flags incorrectly
     if len(unused_argv) != 1:
@@ -127,7 +117,7 @@ def main(unused_argv):
 
     # Define train_dir
     FLAGS.train_dir = FLAGS.train_dir or os.path.join(EXPERIMENTS_DIR,
-        experiment_name())
+        util.experiment_name(FLAGS.experiment_name))
 
     # Initialize bestmodel directory
     bestmodel_dir = os.path.join(FLAGS.train_dir, "best_checkpoint")
