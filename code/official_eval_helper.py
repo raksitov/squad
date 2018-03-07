@@ -239,13 +239,15 @@ def generate_answers(session, model, word2id, qn_uuid_data, context_token_data, 
     """
     uuid2ans = {} # maps uuid to string containing predicted answer
     data_size = len(qn_uuid_data)
-    num_batches = ((data_size-1) / model.FLAGS.batch_size) + 1
+    num_batches = ((data_size-1) / model.FLAGS.h_batch_size) + 1
     batch_num = 0
     detokenizer = MosesDetokenizer()
 
     print "Generating answers..."
 
-    for batch in get_batch_generator(word2id, qn_uuid_data, context_token_data, qn_token_data, model.FLAGS.batch_size, model.FLAGS.context_len, model.FLAGS.question_len):
+    for batch in get_batch_generator(word2id, qn_uuid_data, context_token_data,
+        qn_token_data, model.FLAGS.h_batch_size, model.FLAGS.h_context_len,
+        model.FLAGS.h_question_len):
 
         # Get the predicted spans
         pred_start_batch, pred_end_batch = model.get_start_end_pos(session, batch)

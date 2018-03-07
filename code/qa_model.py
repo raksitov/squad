@@ -64,13 +64,13 @@ class QAModel(object):
         params = tf.trainable_variables()
         gradients = tf.gradients(self.loss, params)
         self.gradient_norm = tf.global_norm(gradients)
-        clipped_gradients, _ = tf.clip_by_global_norm(gradients, FLAGS.max_gradient_norm)
+        clipped_gradients, _ = tf.clip_by_global_norm(gradients, FLAGS.h_max_gradient_norm)
         self.param_norm = tf.global_norm(params)
 
         # Define optimizer and updates
         # (updates is what you need to fetch in session.run to do a gradient update)
         self.global_step = tf.Variable(0, name="global_step", trainable=False)
-        opt = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate) # you can try other optimizers
+        opt = tf.train.AdamOptimizer(learning_rate=FLAGS.h_learning_rate) # you can try other optimizers
         self.updates = opt.apply_gradients(zip(clipped_gradients, params), global_step=self.global_step)
 
         # Define savers (for checkpointing) and summaries (for tensorboard)
@@ -86,10 +86,10 @@ class QAModel(object):
         # Add placeholders for inputs.
         # These are all batch-first: the None corresponds to batch_size and
         # allows you to run the same model with variable batch_size
-        self.context_ids = tf.placeholder(tf.int32, shape=[None, self.FLAGS.context_len])
-        self.context_mask = tf.placeholder(tf.int32, shape=[None, self.FLAGS.context_len])
-        self.qn_ids = tf.placeholder(tf.int32, shape=[None, self.FLAGS.question_len])
-        self.qn_mask = tf.placeholder(tf.int32, shape=[None, self.FLAGS.question_len])
+        self.context_ids = tf.placeholder(tf.int32, shape=[None, self.FLAGS.h_context_len])
+        self.context_mask = tf.placeholder(tf.int32, shape=[None, self.FLAGS.h_context_len])
+        self.qn_ids = tf.placeholder(tf.int32, shape=[None, self.FLAGS.h_question_len])
+        self.qn_mask = tf.placeholder(tf.int32, shape=[None, self.FLAGS.h_question_len])
         self.ans_span = tf.placeholder(tf.int32, shape=[None, 2])
 
         # Add a placeholder to feed in the keep probability (for dropout).
@@ -130,12 +130,13 @@ class QAModel(object):
         # Use a RNN to get hidden states for the context and the question
         # Note: here the RNNEncoder is shared (i.e. the weights are the same)
         # between the context and the question.
-        encoder = RNNEncoder(self.FLAGS.hidden_size, self.keep_prob)
+        encoder = RNNEncoder(self.FLAGS.h_hidden_size, self.keep_prob)
         context_hiddens = encoder.build_graph(self.context_embs, self.context_mask) # (batch_size, context_len, hidden_size*2)
         question_hiddens = encoder.build_graph(self.qn_embs, self.qn_mask) # (batch_size, question_len, hidden_size*2)
 
         # Use context hidden states to attend to question hidden states
-        attn_layer = BasicAttn(self.keep_prob, self.FLAGS.hidden_size*2, self.FLAGS.hidden_size*2)
+        attn_layer = BasicAttn(self.keep_prob, self.FLAGS.h_hidden_size*2,
+            self.FLAGS.h_hidden_size*2)
         _, attn_output = attn_layer.build_graph(question_hiddens, self.qn_mask, context_hiddens) # attn_output is shape (batch_size, context_len, hidden_size*2)
 
         # Concat attn_output to context_hiddens to get blended_reps
@@ -144,7 +145,8 @@ class QAModel(object):
         # Apply fully connected layer to each blended representation
         # Note, blended_reps_final corresponds to b' in the handout
         # Note, tf.contrib.layers.fully_connected applies a ReLU non-linarity here by default
-        blended_reps_final = tf.contrib.layers.fully_connected(blended_reps, num_outputs=self.FLAGS.hidden_size) # blended_reps_final is shape (batch_size, context_len, hidden_size)
+        blended_reps_final = tf.contrib.layers.fully_connected(blended_reps,
+            num_outputs=self.FLAGS.h_hidden_size) # blended_reps_final is shape (batch_size, context_len, hidden_size)
 
         # Use softmax layer to compute probability distribution for start location
         # Note this produces self.logits_start and self.probdist_start, both of which have shape (batch_size, context_len)
@@ -217,7 +219,7 @@ class QAModel(object):
         input_feed[self.qn_ids] = batch.qn_ids
         input_feed[self.qn_mask] = batch.qn_mask
         input_feed[self.ans_span] = batch.ans_span
-        input_feed[self.keep_prob] = 1.0 - self.FLAGS.dropout # apply dropout
+        input_feed[self.keep_prob] = 1.0 - self.FLAGS.h_dropout # apply dropout
 
         # output_feed contains the things we want to fetch.
         output_feed = [self.updates, self.summaries, self.loss, self.global_step, self.param_norm, self.gradient_norm]
@@ -302,7 +304,7 @@ class QAModel(object):
           mask_base = np.arange(len(start_dist[0])).reshape(1, -1)
           mask_pos = start_pos.reshape(-1, 1)
           mask_start = mask_base >= mask_pos
-          mask_end = mask_base <= mask_pos + (self.FLAGS.answer_len - 1)
+          mask_end = mask_base <= mask_pos + (self.FLAGS.h_answer_len - 1)
           end_pos = np.argmax(np.where(mask_start & mask_end, end_dist, -1), axis=1)
         else:
           end_pos = np.argmax(end_dist, axis=1)
@@ -330,7 +332,9 @@ class QAModel(object):
         # which are longer than our context_len or question_len.
         # We need to do this because if, for example, the true answer is cut
         # off the context, then the loss function is undefined.
-        for batch in get_batch_generator(self.word2id, dev_context_path, dev_qn_path, dev_ans_path, self.FLAGS.batch_size, context_len=self.FLAGS.context_len, question_len=self.FLAGS.question_len, discard_long=True):
+        for batch in get_batch_generator(self.word2id, dev_context_path,
+            dev_qn_path, dev_ans_path, self.FLAGS.h_batch_size,
+            context_len=self.FLAGS.h_context_len, question_len=self.FLAGS.h_question_len, discard_long=True):
 
             # Get loss for this batch
             loss = self.get_loss(session, batch)
@@ -385,7 +389,9 @@ class QAModel(object):
 
         # Note here we select discard_long=False because we want to sample from the entire dataset
         # That means we're truncating, rather than discarding, examples with too-long context or questions
-        for batch in get_batch_generator(self.word2id, context_path, qn_path, ans_path, self.FLAGS.batch_size, context_len=self.FLAGS.context_len, question_len=self.FLAGS.question_len, discard_long=False):
+        for batch in get_batch_generator(self.word2id, context_path, qn_path,
+            ans_path, self.FLAGS.h_batch_size,
+            context_len=self.FLAGS.h_context_len, question_len=self.FLAGS.h_question_len, discard_long=False):
 
             pred_start_pos, pred_end_pos = self.get_start_end_pos(session, batch)
 
@@ -468,7 +474,9 @@ class QAModel(object):
             epoch_tic = time.time()
 
             # Loop over batches
-            for batch in get_batch_generator(self.word2id, train_context_path, train_qn_path, train_ans_path, self.FLAGS.batch_size, context_len=self.FLAGS.context_len, question_len=self.FLAGS.question_len, discard_long=True):
+            for batch in get_batch_generator(self.word2id, train_context_path,
+                train_qn_path, train_ans_path, self.FLAGS.h_batch_size,
+                context_len=self.FLAGS.h_context_len, question_len=self.FLAGS.h_question_len, discard_long=True):
 
                 # Run training iteration
                 iter_tic = time.time()

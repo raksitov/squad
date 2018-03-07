@@ -29,7 +29,6 @@ from qa_model import QAModel
 from vocab import get_glove
 from official_eval_helper import get_json_data, generate_answers
 
-
 logging.basicConfig(level=logging.INFO)
 
 MAIN_DIR = os.path.relpath(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) # relative path of the main directory
@@ -44,16 +43,15 @@ tf.app.flags.DEFINE_string("experiment_name", "", "Unique name for your experime
 tf.app.flags.DEFINE_integer("num_epochs", 0, "Number of epochs to train. 0 means train indefinitely")
 
 # Hyperparameters
-tf.app.flags.DEFINE_float("learning_rate", 0.001, "Learning rate.")
-tf.app.flags.DEFINE_float("max_gradient_norm", 5.0, "Clip gradients to this norm.")
-tf.app.flags.DEFINE_float("dropout", 0.15, "Fraction of units randomly dropped on non-recurrent connections.")
-tf.app.flags.DEFINE_integer("batch_size", 100, "Batch size to use")
-tf.app.flags.DEFINE_integer("hidden_size", 200, "Size of the hidden states")
-tf.app.flags.DEFINE_integer("context_len", 600, "The maximum context length of your model")
-tf.app.flags.DEFINE_integer("question_len", 30, "The maximum question length of your model")
-tf.app.flags.DEFINE_integer("embedding_size", 100, "Size of the pretrained word vectors. This needs to be one of the available GloVe dimensions: 50/100/200/300")
-
-tf.app.flags.DEFINE_integer("answer_len", 15, "The maximum answer length of your model")
+tf.app.flags.DEFINE_float("h_learning_rate", 0.001, "Learning rate.")
+tf.app.flags.DEFINE_float("h_max_gradient_norm", 5.0, "Clip gradients to this norm.")
+tf.app.flags.DEFINE_float("h_dropout", 0.15, "Fraction of units randomly dropped on non-recurrent connections.")
+tf.app.flags.DEFINE_integer("h_batch_size", 100, "Batch size to use")
+tf.app.flags.DEFINE_integer("h_hidden_size", 200, "Size of the hidden states")
+tf.app.flags.DEFINE_integer("h_context_len", 600, "The maximum context length of your model")
+tf.app.flags.DEFINE_integer("h_question_len", 30, "The maximum question length of your model")
+tf.app.flags.DEFINE_integer("h_embedding_size", 100, "Size of the pretrained word vectors. This needs to be one of the available GloVe dimensions: 50/100/200/300")
+tf.app.flags.DEFINE_integer("h_answer_len", 15, "The maximum answer length of your model")
 
 # Addons
 tf.app.flags.DEFINE_bool("prevent_end_before_start", True, "Prevents malformed spans from happening")
@@ -102,14 +100,16 @@ def initialize_model(session, model, train_dir, expect_exists):
             session.run(tf.global_variables_initializer())
             print 'Num params: %d' % sum(v.get_shape().num_elements() for v in tf.trainable_variables())
 
+def hparams_to_str():
+  hparams_names = [name for name in sorted(tf.flags.FLAGS.__flags.keys()) if
+      name.startswith('h_')]
+  ordered_values = [str(tf.flags.FLAGS.__flags[name]) for name in hparams_names]
+  return ':'.join(ordered_values)
+
 def experiment_name():
-  hparams = 'lr{}-nrm{}-drp{}-bs{}-hid{}-ctx{}-ql{}-emb{}'.format(
-      FLAGS.learning_rate, FLAGS.max_gradient_norm, FLAGS.dropout,
-      FLAGS.batch_size, FLAGS.hidden_size, FLAGS.context_len,
-      FLAGS.question_len, FLAGS.embedding_size)
-  if not FLAGS.experiment_name:
-    return hparams
-  return FLAGS.experiment_name
+  if FLAGS.experiment_name:
+    return FLAGS.experiment_name
+  return hparams_to_str()
 
 
 def main(unused_argv):
@@ -132,10 +132,11 @@ def main(unused_argv):
     bestmodel_dir = os.path.join(FLAGS.train_dir, "best_checkpoint")
 
     # Define path for glove vecs
-    FLAGS.glove_path = FLAGS.glove_path or os.path.join(DEFAULT_DATA_DIR, "glove.6B.{}d.txt".format(FLAGS.embedding_size))
+    FLAGS.glove_path = FLAGS.glove_path or os.path.join(DEFAULT_DATA_DIR,
+        "glove.6B.{}d.txt".format(FLAGS.h_embedding_size))
 
     # Load embedding matrix and vocab mappings
-    emb_matrix, word2id, id2word = get_glove(FLAGS.glove_path, FLAGS.embedding_size)
+    emb_matrix, word2id, id2word = get_glove(FLAGS.glove_path, FLAGS.h_embedding_size)
 
     # Get filepaths to train/dev datafiles for tokenized queries, contexts and answers
     train_context_path = os.path.join(FLAGS.data_dir, "train.context")
