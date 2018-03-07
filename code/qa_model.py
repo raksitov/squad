@@ -23,6 +23,8 @@ import os
 import sys
 import json
 
+import util
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.ops import variable_scope as vs
@@ -536,7 +538,8 @@ class QAModel(object):
             logging.info("End of epoch %i. Time for epoch: %f" % (epoch, epoch_toc-epoch_tic))
 
         with open(self.FLAGS.experiments_results, 'a') as writer:
-          json.dump(best_dev_f1, writer)
+          json.dump(util.serialize_results(best_dev_f1, best_dev_em,
+            self.FLAGS.num_epochs), writer)
           writer.write('\n')
 
         sys.stdout.flush()
