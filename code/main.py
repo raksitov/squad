@@ -54,8 +54,10 @@ tf.app.flags.DEFINE_integer("h_context_len", 600, "The maximum context length of
 tf.app.flags.DEFINE_integer("h_question_len", 30, "The maximum question length of your model")
 tf.app.flags.DEFINE_integer("h_embedding_size", 100, "Size of the pretrained word vectors. This needs to be one of the available GloVe dimensions: 50/100/200/300")
 tf.app.flags.DEFINE_integer("h_answer_len", 15, "The maximum answer length of your model")
+tf.app.flags.DEFINE_integer("h_num_layers", 1, "The number of layers for RNN encoder")
 
 # Addons
+tf.app.flags.DEFINE_bool("use_multi_layer_rnn", True, "Enables multilayered rnn")
 tf.app.flags.DEFINE_bool("prevent_end_before_start", True, "Prevents malformed spans from happening")
 tf.app.flags.DEFINE_string("experiments_results", os.path.join(DEFAULT_DATA_DIR, 'experiments_results.json'), "Results of completed experiments")
 
