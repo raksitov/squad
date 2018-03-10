@@ -317,28 +317,28 @@ class QAModel(object):
         return start_pos, end_pos
 
 
-    def get_dev_loss(self, session, dev_context_path, dev_qn_path, dev_ans_path):
+    def get_dataset_loss(self, session, context_path, qn_path, ans_path, dataset='dev'):
         """
-        Get loss for entire dev set.
+        Get loss for entire dataset.
 
         Inputs:
           session: TensorFlow session
-          dev_qn_path, dev_context_path, dev_ans_path: paths to the dev.{context/question/answer} data files
+          qn_path, context_path, ans_path: paths to the dataset.{context/question/answer} data files
 
         Outputs:
-          dev_loss: float. Average loss across the dev set.
+          loss: float. Average loss across the dataset.
         """
-        logging.info("Calculating dev loss...")
+        logging.info("Calculating {} loss...".format(dataset))
         tic = time.time()
         loss_per_batch, batch_lengths = [], []
 
-        # Iterate over dev set batches
+        # Iterate over dataset batches
         # Note: here we set discard_long=True, meaning we discard any examples
         # which are longer than our context_len or question_len.
         # We need to do this because if, for example, the true answer is cut
         # off the context, then the loss function is undefined.
-        for batch in get_batch_generator(self.word2id, dev_context_path,
-            dev_qn_path, dev_ans_path, self.FLAGS.h_batch_size,
+        for batch in get_batch_generator(self.word2id, context_path,
+            qn_path, ans_path, self.FLAGS.h_batch_size,
             context_len=self.FLAGS.h_context_len, question_len=self.FLAGS.h_question_len, discard_long=True):
 
             # Get loss for this batch
@@ -350,12 +350,12 @@ class QAModel(object):
         # Calculate average loss
         total_num_examples = sum(batch_lengths)
         toc = time.time()
-        print "Computed dev loss over %i examples in %.2f seconds" % (total_num_examples, toc-tic)
+        print "Computed %s loss over %i examples in %.2f seconds" % (dataset, total_num_examples, toc-tic)
 
         # Overall loss is total loss divided by total number of examples
-        dev_loss = sum(loss_per_batch) / float(total_num_examples)
+        loss = sum(loss_per_batch) / float(total_num_examples)
 
-        return dev_loss
+        return loss
 
 
     def check_f1_em(self, session, context_path, qn_path, ans_path, dataset, num_samples=100, print_to_screen=False):
@@ -510,9 +510,15 @@ class QAModel(object):
                 if global_step % self.FLAGS.eval_every == 0:
 
                     # Get loss for entire dev set and log to tensorboard
-                    dev_loss = self.get_dev_loss(session, dev_context_path, dev_qn_path, dev_ans_path)
+                    dev_loss = self.get_dataset_loss(session, dev_context_path,
+                        dev_qn_path, dev_ans_path)
                     logging.info("Epoch %d, Iter %d, dev loss: %f" % (epoch, global_step, dev_loss))
                     write_summary(dev_loss, "dev/loss", summary_writer, global_step)
+                    if self.FLAGS.train_loss:
+                      train_loss = self.get_dataset_loss(session, train_context_path,
+                          train_qn_path, train_ans_path, 'train')
+                      logging.info("Epoch %d, Iter %d, dev loss: %f" % (epoch, global_step, train_loss))
+                      write_summary(train_loss, "train/loss", summary_writer, global_step)
 
 
                     # Get F1/EM on train set and log to tensorboard
