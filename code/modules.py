@@ -36,8 +36,7 @@ class RNNEncoder(object):
     This code uses a bidirectional GRU, but you could experiment with other types of RNN.
     """
 
-    def __init__(self, hidden_size, keep_prob, num_layers=1,
-        use_multi_layer_rnn=False, cell_type='gru'):
+    def __init__(self, hidden_size, keep_prob, num_layers=1, cell_type='gru'):
         """
         Inputs:
           hidden_size: int. Hidden size of the RNN
@@ -53,12 +52,12 @@ class RNNEncoder(object):
         dropout = lambda: DropoutWrapper(get_cell(), input_keep_prob=self.keep_prob)
         self.hidden_size = hidden_size
         self.keep_prob = keep_prob
-        self.use_multi_layer_rnn = use_multi_layer_rnn
+        self.use_multi_layer_rnn = num_layers > 1
         self.rnn_cell_fw = dropout()
-        if use_multi_layer_rnn:
+        if self.use_multi_layer_rnn:
           self.rnn_cell_fw = [dropout() for _ in xrange(num_layers)]
         self.rnn_cell_bw = dropout()
-        if use_multi_layer_rnn:
+        if self.use_multi_layer_rnn:
           self.rnn_cell_bw = [dropout() for _ in xrange(num_layers)]
 
     def build_graph(self, inputs, masks):
@@ -89,13 +88,13 @@ class RNNEncoder(object):
               outputs, _ = tf.nn.bidirectional_dynamic_rnn(self.rnn_cell_fw,
                   self.rnn_cell_bw, inputs, sequence_length=input_lens, dtype=tf.float32)
 
-            # Concatenate the forward and backward hidden states
-            out = tf.concat(outputs, 2)
+              # Concatenate the forward and backward hidden states
+              outputs = tf.concat(outputs, 2)
 
             # Apply dropout
-            out = tf.nn.dropout(out, self.keep_prob)
+            outputs = tf.nn.dropout(outputs, self.keep_prob)
 
-            return out
+            return outputs
 
 
 class SimpleSoftmaxLayer(object):
