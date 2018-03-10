@@ -36,14 +36,21 @@ class RNNEncoder(object):
     This code uses a bidirectional GRU, but you could experiment with other types of RNN.
     """
 
-    def __init__(self, hidden_size, keep_prob, num_layers=1, use_multi_layer_rnn=False):
+    def __init__(self, hidden_size, keep_prob, num_layers=1,
+        use_multi_layer_rnn=False, cell_type='gru'):
         """
         Inputs:
           hidden_size: int. Hidden size of the RNN
           keep_prob: Tensor containing a single scalar that is the keep probability (for dropout)
         """
-        cell = lambda: rnn_cell.GRUCell(self.hidden_size)
-        dropout = lambda: DropoutWrapper(cell(), input_keep_prob=self.keep_prob)
+        def get_cell():
+          if cell_type == 'gru':
+            return rnn_cell.GRUCell(self.hidden_size)
+          elif cell_type == 'lstm':
+            return rnn_cell.LSTMCell(self.hidden_size)
+          else:
+            raise Exception('Unknown cell type: {}'.format(cell_type))
+        dropout = lambda: DropoutWrapper(get_cell(), input_keep_prob=self.keep_prob)
         self.hidden_size = hidden_size
         self.keep_prob = keep_prob
         self.use_multi_layer_rnn = use_multi_layer_rnn

@@ -55,6 +55,7 @@ tf.app.flags.DEFINE_integer("h_question_len", 30, "The maximum question length o
 tf.app.flags.DEFINE_integer("h_embedding_size", 100, "Size of the pretrained word vectors. This needs to be one of the available GloVe dimensions: 50/100/200/300")
 tf.app.flags.DEFINE_integer("h_answer_len", 15, "The maximum answer length of your model")
 tf.app.flags.DEFINE_integer("h_num_layers", 1, "The number of layers for RNN encoder")
+tf.app.flags.DEFINE_string("h_cell_type", "gru", "The type of RNN cell.")
 
 # Addons
 tf.app.flags.DEFINE_bool("use_multi_layer_rnn", True, "Enables multilayered rnn")
