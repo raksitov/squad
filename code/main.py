@@ -59,6 +59,7 @@ tf.app.flags.DEFINE_string("h_cell_type", "gru", "The type of RNN cell.")
 
 # Addons
 tf.app.flags.DEFINE_bool("prevent_end_before_start", True, "Prevents malformed spans from happening")
+tf.app.flags.DEFINE_bool("multiply_probabilities", False, "Decide span based on the product of probabilites")
 tf.app.flags.DEFINE_string("experiments_results", os.path.join(DEFAULT_DATA_DIR, 'experiments_results.json'), "Results of completed experiments")
 tf.app.flags.DEFINE_bool("train_loss", False, "Adds train loss graph calculated over the whole train dataset")
 

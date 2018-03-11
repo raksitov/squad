@@ -303,16 +303,28 @@ class QAModel(object):
         # Get start_dist and end_dist, both shape (batch_size, context_len)
         start_dist, end_dist = self.get_prob_dists(session, batch)
 
-        # Take argmax to get start_pos and end_post, both shape (batch_size)
-        start_pos = np.argmax(start_dist, axis=1)
-        if self.FLAGS.prevent_end_before_start:
-          mask_base = np.arange(len(start_dist[0])).reshape(1, -1)
-          mask_pos = start_pos.reshape(-1, 1)
-          mask_start = mask_base >= mask_pos
-          mask_end = mask_base <= mask_pos + (self.FLAGS.h_answer_len - 1)
-          end_pos = np.argmax(np.where(mask_start & mask_end, end_dist, -1), axis=1)
+        if self.FLAGS.multiply_probabilities:
+          def pad_with(array, shape, value=0.):
+            padded = np.full((shape[0], shape[1] + self.FLAGS.h_answer_len - 1), value)
+            padded[:array.shape[0], :array.shape[1]] = array
+            return padded
+          start = pad_with(start_dist, start_dist.shape)
+          rolling_mult = [start * pad_with(end_dist[:, idx:], start_dist.shape)
+              for idx in xrange(self.FLAGS.h_answer_len)]
+          probs = np.stack(rolling_mult, axis=1)
+          pos = np.asarray([np.unravel_index(np.argmax(probs[i]), probs[i].shape) for i in xrange(probs.shape[0])])
+          start_pos, end_pos = pos[..., 1], pos[..., 0] + pos[..., 1]
         else:
-          end_pos = np.argmax(end_dist, axis=1)
+          # Take argmax to get start_pos and end_post, both shape (batch_size)
+          start_pos = np.argmax(start_dist, axis=1)
+          if self.FLAGS.prevent_end_before_start:
+            mask_base = np.arange(len(start_dist[0])).reshape(1, -1)
+            mask_pos = start_pos.reshape(-1, 1)
+            mask_start = mask_base >= mask_pos
+            mask_end = mask_base <= mask_pos + (self.FLAGS.h_answer_len - 1)
+            end_pos = np.argmax(np.where(mask_start & mask_end, end_dist, -1), axis=1)
+          else:
+            end_pos = np.argmax(end_dist, axis=1)
 
         return start_pos, end_pos
 
