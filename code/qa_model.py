@@ -73,7 +73,17 @@ class QAModel(object):
         # Define optimizer and updates
         # (updates is what you need to fetch in session.run to do a gradient update)
         self.global_step = tf.Variable(0, name="global_step", trainable=False)
-        opt = tf.train.AdamOptimizer(learning_rate=FLAGS.h_learning_rate) # you can try other optimizers
+
+        def get_optimizer():
+          if self.FLAGS.h_optimizer == 'adam':
+            return tf.train.AdamOptimizer
+          elif self.FLAGS.h_optimizer == 'adagrad':
+            return tf.train.AdagradOptimizer
+          elif self.FLAGS.h_optimizer == 'adadelta':
+            return tf.train.AdadeltaOptimizer
+          else:
+            raise Exception('Unknown optimizer type: {}'.format(self.FLAGS.h_optimizer))
+        opt = get_optimizer(learning_rate=FLAGS.h_learning_rate)
         self.updates = opt.apply_gradients(zip(clipped_gradients, params), global_step=self.global_step)
 
         # Define savers (for checkpointing) and summaries (for tensorboard)
