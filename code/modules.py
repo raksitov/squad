@@ -18,6 +18,7 @@ import tensorflow as tf
 from tensorflow.python.ops.rnn_cell import DropoutWrapper
 from tensorflow.python.ops import variable_scope as vs
 from tensorflow.python.ops import rnn_cell
+from tensorflow.contrib.rnn import LayerNormBasicLSTMCell
 
 
 class RNNEncoder(object):
@@ -48,6 +49,9 @@ class RNNEncoder(object):
             return rnn_cell.GRUCell(self.hidden_size)
           elif cell_type == 'lstm':
             return rnn_cell.LSTMCell(self.hidden_size)
+          elif cell_type == 'layer_norm':
+            return LayerNormBasicLSTMCell(self.hidden_size,
+                dropout_keep_prob=keep_prob)
           else:
             raise Exception('Unknown cell type: {}'.format(cell_type))
         dropout = lambda: DropoutWrapper(get_cell(), input_keep_prob=self.keep_prob)
