@@ -83,7 +83,7 @@ class QAModel(object):
             return tf.train.AdadeltaOptimizer
           else:
             raise Exception('Unknown optimizer type: {}'.format(self.FLAGS.h_optimizer))
-        opt = get_optimizer(learning_rate=FLAGS.h_learning_rate)
+        opt = get_optimizer()(learning_rate=FLAGS.h_learning_rate)
         self.updates = opt.apply_gradients(zip(clipped_gradients, params), global_step=self.global_step)
 
         # Define savers (for checkpointing) and summaries (for tensorboard)
