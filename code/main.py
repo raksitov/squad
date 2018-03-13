@@ -65,6 +65,7 @@ tf.app.flags.DEFINE_string("experiments_results", os.path.join(DEFAULT_DATA_DIR,
 tf.app.flags.DEFINE_bool("train_loss", False, "Adds train loss graph calculated over the whole train dataset")
 tf.app.flags.DEFINE_bool("modeling_layer_uses_rnn", True, "Use RNN for modelling layer instead of FF")
 tf.app.flags.DEFINE_bool("use_bidaf", False, "Whether to use basic attention or bidaf.")
+tf.app.flags.DEFINE_bool("use_rnn_for_ends", False, "Whether to use rnn for predicting span ends.")
 
 # How often to print, save, eval
 tf.app.flags.DEFINE_integer("print_every", 1, "How many iterations to do per print.")
