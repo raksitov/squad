@@ -227,3 +227,71 @@ def masked_softmax(logits, mask, dim):
     masked_logits = tf.add(logits, exp_mask) # where there's padding, set logits to -large
     prob_dist = tf.nn.softmax(masked_logits, dim)
     return masked_logits, prob_dist
+
+class BiDAF(object):
+    """Module for BiDAF.
+
+    """
+
+    def __init__(self, keep_prob, key_vec_size, value_vec_size):
+        """
+        Inputs:
+          keep_prob: tensor containing a single scalar that is the keep probability (for dropout)
+          key_vec_size: size of the key vectors. int
+          value_vec_size: size of the value vectors. int
+        """
+        self.keep_prob = keep_prob
+        self.key_vec_size = key_vec_size
+        self.value_vec_size = value_vec_size
+
+    def build_graph(self, values, values_mask, keys, keys_mask):
+        """
+        Keys attend to values and vice versa.
+        For each key and value, return an attention distribution and an attention output vector.
+
+        Inputs:
+          values: Tensor shape (batch_size, num_values, value_vec_size).
+          values_mask: Tensor shape (batch_size, num_values).
+            1s where there's real input, 0s where there's padding
+          keys: Tensor shape (batch_size, num_keys, value_vec_size).
+          keys_mask: Tensor shape (batch_size, num_keys).
+            1s where there's real input, 0s where there's padding
+
+        Outputs:
+          keys_output: Tensor shape (batch_size, num_keys, hidden_size).
+            This is the keys attention output; the weighted sum of the values
+            (using the keys attention distribution as weights).
+          values_output: Tensor shape (batch_size, num_keys).
+            This is the values attention output; the weighted sum of the values
+            (using the values attention distribution as weights).
+        """
+        with vs.variable_scope("BiDAF"):
+
+            # Calculate attention distribution
+            w1 = tf.get_variable('w1', shape=(keys.shape[2]), initializer=tf.random_normal_initializer(mean=1., stddev=0.001))
+            w2 = tf.get_variable('w2', shape=(keys.shape[2]), initializer=tf.random_normal_initializer(mean=0., stddev=0.001))
+            w3 = tf.get_variable('w3', shape=(keys.shape[2]), initializer=tf.random_normal_initializer(mean=0., stddev=0.001))
+            values_t = tf.transpose(values, perm=[0, 2, 1]) # (batch_size, value_vec_size, num_values)
+            attn_logits = (tf.matmul(keys * w1, values_t) + # shape (batch_size, num_keys, num_values)
+                tf.expand_dims(tf.reduce_sum(keys * w2, axis=2), 2) +
+                tf.expand_dims(tf.reduce_sum(values * w3, axis=2), 1))
+
+            attn_logits_values_mask = tf.expand_dims(values_mask, 1) # shape (batch_size, 1, num_values)
+            _, keys_attn_dist = masked_softmax(attn_logits, attn_logits_values_mask, 2) # shape (batch_size, num_keys, num_values). take softmax over values
+
+            # Use attention distribution to take weighted sum of values
+            keys_output = tf.matmul(keys_attn_dist, values) # shape (batch_size, num_keys, value_vec_size)
+
+            # Apply dropout
+            keys_output = tf.nn.dropout(keys_output, self.keep_prob)
+
+            m = tf.reduce_max(attn_logits, axis=2) # shape (batch_size, num_keys)
+            _, values_attn_dist = masked_softmax(m, keys_mask, 1)
+            values_attn_dist = tf.expand_dims(values_attn_dist, 1)
+            values_output = tf.matmul(values_attn_dist, keys)
+
+            # Apply dropout
+            values_output = tf.nn.dropout(values_output, self.keep_prob)
+
+
+            return keys_output, values_output
