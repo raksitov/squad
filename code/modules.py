@@ -38,7 +38,7 @@ class RNNEncoder(object):
     """
 
     def __init__(self, hidden_size, keep_prob, num_layers=1, cell_type='gru',
-        scope='RNNEncoder'):
+        scope='RNNEncoder', combiner='concat'):
         """
         Inputs:
           hidden_size: int. Hidden size of the RNN
@@ -65,6 +65,7 @@ class RNNEncoder(object):
         if self.use_multi_layer_rnn:
           self.rnn_cell_bw = [dropout() for _ in xrange(num_layers)]
         self.scope = scope
+        self.combiner = combiner
 
     def build_graph(self, inputs, masks=None):
         """
@@ -90,14 +91,26 @@ class RNNEncoder(object):
                   inputs=inputs, 
                   sequence_length=input_lens, 
                   dtype=tf.float32)
+              outputs = tf.split(outputs, 2, axis=2)
             else:
               # Note: fw_out and bw_out are the hidden states for every timestep.
               # Each is shape (batch_size, seq_len, hidden_size).
               outputs, _ = tf.nn.bidirectional_dynamic_rnn(self.rnn_cell_fw,
                   self.rnn_cell_bw, inputs, sequence_length=input_lens, dtype=tf.float32)
 
+            if self.combiner == 'concat':
               # Concatenate the forward and backward hidden states
               outputs = tf.concat(outputs, 2)
+            elif self.combiner == 'sum':
+              outputs = outputs[0] + outputs[1]
+            elif self.combiner == 'max':
+              outputs = tf.maximum(outputs[0], outputs[1])
+            elif self.combiner == 'mean':
+              z = tf.constant([0.5])
+              outputs = (outputs[0] + outputs[1]) * z
+            else:
+              raise Exception('Unknown combiner type: {}'.format(self.combiner))
+
 
             # Apply dropout
             outputs = tf.nn.dropout(outputs, self.keep_prob)

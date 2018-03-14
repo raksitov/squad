@@ -57,6 +57,7 @@ tf.app.flags.DEFINE_integer("h_answer_len", 15, "The maximum answer length of yo
 tf.app.flags.DEFINE_integer("h_num_layers", 1, "The number of layers for RNN encoder")
 tf.app.flags.DEFINE_string("h_cell_type", "gru", "The type of RNN cell.")
 tf.app.flags.DEFINE_string("h_optimizer", "adam", "The type of optimizer.")
+tf.app.flags.DEFINE_string("h_combiner", "concat", "Choose combiner for hidden states.")
 
 # Addons
 tf.app.flags.DEFINE_bool("prevent_end_before_start", True, "Prevents malformed spans from happening")

@@ -145,6 +145,7 @@ class QAModel(object):
         # between the context and the question.
         encoder = RNNEncoder(self.FLAGS.h_hidden_size, self.keep_prob,
             num_layers=self.FLAGS.h_num_layers,
+            combiner=self.FLAGS.h_combiner,
             cell_type=self.FLAGS.h_cell_type)
         context_hiddens = encoder.build_graph(self.context_embs, self.context_mask) # (batch_size, context_len, hidden_size*2)
         question_hiddens = encoder.build_graph(self.qn_embs, self.qn_mask) # (batch_size, question_len, hidden_size*2)
@@ -168,6 +169,7 @@ class QAModel(object):
         if self.FLAGS.modeling_layer_uses_rnn:
           modelling_encoder = RNNEncoder(self.FLAGS.h_hidden_size, self.keep_prob,
               num_layers=self.FLAGS.h_num_layers,
+              combiner=self.FLAGS.h_combiner,
               cell_type=self.FLAGS.h_cell_type, scope='blended_reps_scope')
           blended_reps_final = modelling_encoder.build_graph(blended_reps,
               self.context_mask)
@@ -190,6 +192,7 @@ class QAModel(object):
             if self.FLAGS.use_rnn_for_ends:
               end_encoder = RNNEncoder(self.FLAGS.h_hidden_size, self.keep_prob,
                 num_layers=self.FLAGS.h_num_layers,
+                combiner=self.FLAGS.h_combiner,
                 cell_type=self.FLAGS.h_cell_type, scope='blended_reps_final')
               blended_reps_combined = tf.concat([blended_reps_final, tf.expand_dims(self.probdist_start, 2)], 2)
               blended_reps_final = end_encoder.build_graph(blended_reps_combined, self.context_mask)
