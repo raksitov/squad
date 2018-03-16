@@ -163,7 +163,7 @@ class QAModel(object):
               self.FLAGS.h_hidden_size*2)
           _, attn_output = attn_layer.build_graph(question_hiddens, self.qn_mask, context_hiddens) # attn_output is shape (batch_size, context_len, hidden_size*2)
           # Concat attn_output to context_hiddens to get blended_reps
-          blended_reps = tf.concat([context_hiddens, attn_output], axis=2) # (batch_size, context_len, hidden_size*4)
+          blended_reps = tf.concat([context_hiddens, attn_output, context_hiddens * attn_output], axis=2) # (batch_size, context_len, hidden_size*4)
 
 
         if self.FLAGS.modeling_layer_uses_rnn:
