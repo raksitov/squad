@@ -281,9 +281,14 @@ class BiDAF(object):
         with vs.variable_scope("BiDAF"):
 
             # Calculate attention distribution
-            w1 = tf.get_variable('w1', shape=(keys.shape[2]), initializer=tf.random_normal_initializer(mean=1., stddev=0.001))
-            w2 = tf.get_variable('w2', shape=(keys.shape[2]), initializer=tf.random_normal_initializer(mean=0., stddev=0.001))
-            w3 = tf.get_variable('w3', shape=(keys.shape[2]), initializer=tf.random_normal_initializer(mean=0., stddev=0.001))
+            w1 = tf.get_variable('w1', shape=(keys.shape[2]))
+            w2 = tf.get_variable('w2', shape=(keys.shape[2]))
+            w3 = tf.get_variable('w3', shape=(keys.shape[2]))
+
+            w1 = tf.nn.dropout(w1, self.keep_prob)
+            w2 = tf.nn.dropout(w2, self.keep_prob)
+            w3 = tf.nn.dropout(w3, self.keep_prob)
+
             values_t = tf.transpose(values, perm=[0, 2, 1]) # (batch_size, value_vec_size, num_values)
             attn_logits = (tf.matmul(keys * w1, values_t) + # shape (batch_size, num_keys, num_values)
                 tf.expand_dims(tf.reduce_sum(keys * w2, axis=2), 2) +
@@ -294,16 +299,13 @@ class BiDAF(object):
 
             # Use attention distribution to take weighted sum of values
             keys_output = tf.matmul(keys_attn_dist, values) # shape (batch_size, num_keys, value_vec_size)
-
-            # Apply dropout
             keys_output = tf.nn.dropout(keys_output, self.keep_prob)
 
             m = tf.reduce_max(attn_logits, axis=2) # shape (batch_size, num_keys)
             _, values_attn_dist = masked_softmax(m, keys_mask, 1)
             values_attn_dist = tf.expand_dims(values_attn_dist, 1)
-            values_output = tf.matmul(values_attn_dist, keys)
 
-            # Apply dropout
+            values_output = tf.matmul(values_attn_dist, keys)
             values_output = tf.nn.dropout(values_output, self.keep_prob)
 
 
