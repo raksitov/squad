@@ -158,6 +158,7 @@ class QAModel(object):
               combiner=self.FLAGS.h_combiner,
               cell_type=self.FLAGS.h_cell_type,
               scope='question_encoder')
+          question_hiddens = question_encoder.build_graph(self.qn_embs, self.qn_mask) # (batch_size, question_len, hidden_size*2)
 
         if self.FLAGS.use_bidaf:
           attn_layer = BiDAF(self.keep_prob)
