@@ -167,8 +167,10 @@ class QAModel(object):
 
 
         if self.FLAGS.modeling_layer_uses_rnn:
-          modelling_encoder = RNNEncoder(self.FLAGS.h_hidden_size, self.keep_prob,
-              num_layers=self.FLAGS.h_num_layers,
+          modelling_encoder = RNNEncoder(
+              self.FLAGS.h_model_size, 
+              self.keep_prob,
+              num_layers=self.FLAGS.h_model_layers,
               combiner=self.FLAGS.h_combiner,
               cell_type=self.FLAGS.h_cell_type, scope='blended_reps_scope')
           blended_reps_final = modelling_encoder.build_graph(blended_reps,
