@@ -148,7 +148,16 @@ class QAModel(object):
             combiner=self.FLAGS.h_combiner,
             cell_type=self.FLAGS.h_cell_type)
         context_hiddens = encoder.build_graph(self.context_embs, self.context_mask) # (batch_size, context_len, hidden_size*2)
-        question_hiddens = encoder.build_graph(self.qn_embs, self.qn_mask) # (batch_size, question_len, hidden_size*2)
+        if self.FLAGS.share_encoder:
+          question_hiddens = encoder.build_graph(self.qn_embs, self.qn_mask) # (batch_size, question_len, hidden_size*2)
+        else:
+          question_encoder = RNNEncoder(
+              self.FLAGS.h_hidden_size,
+              self.keep_prob,
+              num_layers=self.FLAGS.h_num_layers,
+              combiner=self.FLAGS.h_combiner,
+              cell_type=self.FLAGS.h_cell_type,
+              scope='question_encoder')
 
         if self.FLAGS.use_bidaf:
           attn_layer = BiDAF(self.keep_prob)
