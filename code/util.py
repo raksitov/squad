@@ -27,6 +27,10 @@ def maybe_parse(name):
     return False
   for idx, name in enumerate(hparams_names()):
     params_dict()[name] = convert(values[idx])
+  # Overrides for eval.
+  for param_to_override in ('batch_size', 'answer_len'):
+    if params_dict()[param_to_override] is not None:
+      params_dict()['h_{}'.format(param_to_override)] = params_dict()[param_to_override]
   return True
 
 def experiment_name(experiment_name):
