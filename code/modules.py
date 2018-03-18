@@ -94,6 +94,8 @@ class RNNEncoder(object):
                   sequence_length=input_lens, 
                   dtype=tf.float32)
               outputs = tf.split(outputs, 2, axis=2)
+              output_state_fw = list(output_state_fw)
+              output_state_bw = list(output_state_bw)
             else:
               # Note: fw_out and bw_out are the hidden states for every timestep.
               # Each is shape (batch_size, seq_len, hidden_size).
