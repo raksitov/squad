@@ -147,9 +147,8 @@ class QAModel(object):
             num_layers=self.FLAGS.h_num_layers,
             combiner=self.FLAGS.h_combiner,
             cell_type=self.FLAGS.h_cell_type)
-        context_hiddens = encoder.build_graph(self.context_embs, self.context_mask) # (batch_size, context_len, hidden_size*2)
         if self.FLAGS.share_encoder:
-          question_hiddens = encoder.build_graph(self.qn_embs, self.qn_mask) # (batch_size, question_len, hidden_size*2)
+          question_hiddens, question_states_fw, question_states_bw = encoder.build_graph(self.qn_embs, self.qn_mask) # (batch_size, question_len, hidden_size*2)
         else:
           question_encoder = RNNEncoder(
               self.FLAGS.h_hidden_size,
@@ -158,7 +157,14 @@ class QAModel(object):
               combiner=self.FLAGS.h_combiner,
               cell_type=self.FLAGS.h_cell_type,
               scope='question_encoder')
-          question_hiddens = question_encoder.build_graph(self.qn_embs, self.qn_mask) # (batch_size, question_len, hidden_size*2)
+          question_hiddens, question_states_fw, question_states_bw = question_encoder.build_graph(self.qn_embs, self.qn_mask) # (batch_size, question_len, hidden_size*2)
+        if not self.FLAGS.reuse_question_states:
+          question_states_fw, question_states_bw = None, None
+        context_hiddens, _, _ = encoder.build_graph(
+            self.context_embs,
+            self.context_mask,
+            initial_states_fw=question_states_fw,
+            initial_states_bw=question_states_bw) # (batch_size, context_len, hidden_size*2)
 
         if self.FLAGS.use_bidaf:
           attn_layer = BiDAF(self.keep_prob)
@@ -182,7 +188,7 @@ class QAModel(object):
               num_layers=self.FLAGS.h_model_layers,
               combiner=self.FLAGS.h_combiner,
               cell_type=self.FLAGS.h_cell_type, scope='blended_reps_scope')
-          blended_reps_final = modelling_encoder.build_graph(blended_reps,
+          blended_reps_final, _, _ = modelling_encoder.build_graph(blended_reps,
               self.context_mask)
         else:
           # Apply fully connected layer to each blended representation
@@ -206,7 +212,7 @@ class QAModel(object):
                 combiner=self.FLAGS.h_combiner,
                 cell_type=self.FLAGS.h_cell_type, scope='blended_reps_final')
               blended_reps_combined = tf.concat([blended_reps_final, tf.expand_dims(self.probdist_start, 2)], 2)
-              blended_reps_final = end_encoder.build_graph(blended_reps_combined, self.context_mask)
+              blended_reps_final, _, _ = end_encoder.build_graph(blended_reps_combined, self.context_mask)
             softmax_layer_end = SimpleSoftmaxLayer()
             self.logits_end, self.probdist_end = softmax_layer_end.build_graph(blended_reps_final, self.context_mask)
 

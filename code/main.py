@@ -70,6 +70,9 @@ tf.app.flags.DEFINE_bool("modeling_layer_uses_rnn", True, "Use RNN for modelling
 tf.app.flags.DEFINE_bool("use_bidaf", False, "Whether to use basic attention or bidaf.")
 tf.app.flags.DEFINE_bool("use_rnn_for_ends", False, "Whether to use rnn for predicting span ends.")
 tf.app.flags.DEFINE_bool("share_encoder", True, "Whether to share weights for questions and answers encoding.")
+tf.app.flags.DEFINE_bool("reuse_question_states", True, "Whether to reuse RNN states for questions when encoding answers.")
+
+# Overrides for hparams
 tf.app.flags.DEFINE_integer("batch_size", None, "Batch size override for eval")
 tf.app.flags.DEFINE_integer("answer_len", None, "The maximum answer length override for eval")
 

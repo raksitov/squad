@@ -67,7 +67,7 @@ class RNNEncoder(object):
         self.scope = scope
         self.combiner = combiner
 
-    def build_graph(self, inputs, masks=None):
+    def build_graph(self, inputs, masks=None, initial_states_fw=None, initial_states_bw=None):
         """
         Inputs:
           inputs: Tensor shape (batch_size, seq_len, input_size)
@@ -85,18 +85,26 @@ class RNNEncoder(object):
               input_lens = tf.reduce_sum(masks, reduction_indices=1) # shape (batch_size)
 
             if self.use_multi_layer_rnn:
-              outputs, _, _ = tf.contrib.rnn.stack_bidirectional_dynamic_rnn(
+              outputs, output_state_fw, output_state_bw = tf.contrib.rnn.stack_bidirectional_dynamic_rnn(
                   cells_fw=self.rnn_cell_fw,
                   cells_bw=self.rnn_cell_bw, 
                   inputs=inputs, 
+                  initial_states_fw=initial_states_fw,
+                  initial_states_bw=initial_states_bw,
                   sequence_length=input_lens, 
                   dtype=tf.float32)
               outputs = tf.split(outputs, 2, axis=2)
             else:
               # Note: fw_out and bw_out are the hidden states for every timestep.
               # Each is shape (batch_size, seq_len, hidden_size).
-              outputs, _ = tf.nn.bidirectional_dynamic_rnn(self.rnn_cell_fw,
-                  self.rnn_cell_bw, inputs, sequence_length=input_lens, dtype=tf.float32)
+              outputs, (output_state_fw, output_state_bw) = tf.nn.bidirectional_dynamic_rnn(
+                  self.rnn_cell_fw,
+                  self.rnn_cell_bw,
+                  inputs,
+                  initial_state_fw=initial_states_fw,
+                  initial_state_bw=initial_states_bw,
+                  sequence_length=input_lens,
+                  dtype=tf.float32)
 
             if self.combiner == 'concat':
               # Concatenate the forward and backward hidden states
@@ -115,7 +123,7 @@ class RNNEncoder(object):
             # Apply dropout
             outputs = tf.nn.dropout(outputs, self.keep_prob)
 
-            return outputs
+            return outputs, output_state_fw, output_state_bw
 
 
 class SimpleSoftmaxLayer(object):
