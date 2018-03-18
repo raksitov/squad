@@ -188,7 +188,7 @@ class QAModel(object):
               num_layers=self.FLAGS.h_model_layers,
               combiner=self.FLAGS.h_combiner,
               cell_type=self.FLAGS.h_cell_type, scope='blended_reps_scope')
-          blended_reps_final, _, _ = modelling_encoder.build_graph(blended_reps,
+          blended_reps_final, model_states_fw, model_states_bw = modelling_encoder.build_graph(blended_reps,
               self.context_mask)
         else:
           # Apply fully connected layer to each blended representation
@@ -207,12 +207,19 @@ class QAModel(object):
         # Note this produces self.logits_end and self.probdist_end, both of which have shape (batch_size, context_len)
         with vs.variable_scope("EndDist"):
             if self.FLAGS.use_rnn_for_ends:
-              end_encoder = RNNEncoder(self.FLAGS.h_hidden_size, self.keep_prob,
-                num_layers=self.FLAGS.h_num_layers,
+              end_encoder = RNNEncoder(
+                self.FLAGS.h_model_size,
+                self.keep_prob,
+                num_layers=self.FLAGS.h_model_layers,
                 combiner=self.FLAGS.h_combiner,
-                cell_type=self.FLAGS.h_cell_type, scope='blended_reps_final')
+                cell_type=self.FLAGS.h_cell_type,
+                scope='blended_reps_final')
               blended_reps_combined = tf.concat([blended_reps_final, tf.expand_dims(self.probdist_start, 2)], 2)
-              blended_reps_final, _, _ = end_encoder.build_graph(blended_reps_combined, self.context_mask)
+              blended_reps_final, _, _ = end_encoder.build_graph(
+                  blended_reps_combined,
+                  self.context_mask,
+                  initial_states_fw=model_states_fw,
+                  initial_states_bw=model_states_bw)
             softmax_layer_end = SimpleSoftmaxLayer()
             self.logits_end, self.probdist_end = softmax_layer_end.build_graph(blended_reps_final, self.context_mask)
 
