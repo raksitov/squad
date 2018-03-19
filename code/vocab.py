@@ -46,6 +46,10 @@ def get_glove(glove_path, glove_dim):
 
     print "Loading GLoVE vectors from file: %s" % glove_path
     vocab_size = int(4e5) # this is the vocab size of the corpus we've downloaded
+    # Hack to support glove.42B.300d.
+    if glove_dim == 42:
+      glove_dim = 300
+      vocab_size = 1917494
 
     emb_matrix = np.zeros((vocab_size + len(_START_VOCAB), glove_dim))
     word2id = {}

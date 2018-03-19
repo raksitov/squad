@@ -109,7 +109,6 @@ class QAModel(object):
         # This is necessary so that we can instruct the model to use dropout when training, but not when testing
         self.keep_prob = tf.placeholder_with_default(1.0, shape=())
 
-
     def add_embedding_layer(self, emb_matrix):
         """
         Adds word embedding layer to the graph.
@@ -121,12 +120,13 @@ class QAModel(object):
         with vs.variable_scope("embeddings"):
 
             # Note: the embedding matrix is a tf.constant which means it's not a trainable parameter
-            embedding_matrix = tf.constant(emb_matrix, dtype=tf.float32, name="emb_matrix") # shape (400002, embedding_size)
+            self.emb_matrix = emb_matrix
+            self.embedding_matrix = tf.placeholder(tf.float32, name="emb_matrix", shape=self.emb_matrix.shape) # shape (400002, embedding_size)
 
             # Get the word embeddings for the context and question,
             # using the placeholders self.context_ids and self.qn_ids
-            self.context_embs = embedding_ops.embedding_lookup(embedding_matrix, self.context_ids) # shape (batch_size, context_len, embedding_size)
-            self.qn_embs = embedding_ops.embedding_lookup(embedding_matrix, self.qn_ids) # shape (batch_size, question_len, embedding_size)
+            self.context_embs = embedding_ops.embedding_lookup(self.embedding_matrix, self.context_ids) # shape (batch_size, context_len, embedding_size)
+            self.qn_embs = embedding_ops.embedding_lookup(self.embedding_matrix, self.qn_ids) # shape (batch_size, question_len, embedding_size)
 
 
     def build_graph(self):
@@ -284,6 +284,8 @@ class QAModel(object):
         input_feed[self.ans_span] = batch.ans_span
         input_feed[self.keep_prob] = 1.0 - self.FLAGS.h_dropout # apply dropout
 
+        input_feed[self.embedding_matrix] = self.emb_matrix
+
         # output_feed contains the things we want to fetch.
         output_feed = [self.updates, self.summaries, self.loss, self.global_step, self.param_norm, self.gradient_norm]
 
@@ -316,6 +318,8 @@ class QAModel(object):
         input_feed[self.ans_span] = batch.ans_span
         # note you don't supply keep_prob here, so it will default to 1 i.e. no dropout
 
+        input_feed[self.embedding_matrix] = self.emb_matrix
+
         output_feed = [self.loss]
 
         [loss] = session.run(output_feed, input_feed)
@@ -340,6 +344,8 @@ class QAModel(object):
         input_feed[self.qn_ids] = batch.qn_ids
         input_feed[self.qn_mask] = batch.qn_mask
         # note you don't supply keep_prob here, so it will default to 1 i.e. no dropout
+
+        input_feed[self.embedding_matrix] = self.emb_matrix
 
         output_feed = [self.probdist_start, self.probdist_end]
         [probdist_start, probdist_end] = session.run(output_feed, input_feed)

@@ -140,8 +140,12 @@ def main(unused_argv):
     bestmodel_dir = os.path.join(FLAGS.train_dir, "best_checkpoint")
 
     # Define path for glove vecs
+    def get_glove_fname(size):
+      if size == 42:
+        return "glove.42B.300d.txt"
+      return "glove.6B.{}d.txt".format(size)
     FLAGS.glove_path = FLAGS.glove_path or os.path.join(DEFAULT_DATA_DIR,
-        "glove.6B.{}d.txt".format(FLAGS.h_embedding_size))
+        get_glove_fname(FLAGS.h_embedding_size))
 
     # Load embedding matrix and vocab mappings
     emb_matrix, word2id, id2word = get_glove(FLAGS.glove_path, FLAGS.h_embedding_size)
