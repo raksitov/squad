@@ -352,7 +352,7 @@ class QAModel(object):
         return probdist_start, probdist_end
 
 
-    def get_start_end_pos(self, session, batch):
+    def get_start_end_pos(self, session, batch, need_confidence=False):
         """
         Run forward-pass only; get the most likely answer span.
 
@@ -367,7 +367,8 @@ class QAModel(object):
         # Get start_dist and end_dist, both shape (batch_size, context_len)
         start_dist, end_dist = self.get_prob_dists(session, batch)
 
-        if self.FLAGS.multiply_probabilities:
+        confidence = None
+        if self.FLAGS.multiply_probabilities or need_confidence:
           def pad_with(array, shape, value=0.):
             padded = np.full((shape[0], shape[1] + self.FLAGS.h_answer_len - 1), value)
             padded[:array.shape[0], :array.shape[1]] = array
@@ -377,7 +378,7 @@ class QAModel(object):
               for idx in xrange(self.FLAGS.h_answer_len)]
           probs = np.stack(rolling_mult, axis=1)
           pos = np.asarray([np.unravel_index(np.argmax(probs[i]), probs[i].shape) for i in xrange(probs.shape[0])])
-          start_pos, end_pos = pos[..., 1], pos[..., 0] + pos[..., 1]
+          start_pos, end_pos, confidence = pos[..., 1], pos[..., 0] + pos[..., 1], np.asarray([np.max(probs[i]) for i in xrange(probs.shape[0])])
         else:
           # Take argmax to get start_pos and end_post, both shape (batch_size)
           start_pos = np.argmax(start_dist, axis=1)
@@ -390,7 +391,7 @@ class QAModel(object):
           else:
             end_pos = np.argmax(end_dist, axis=1)
 
-        return start_pos, end_pos
+        return start_pos, end_pos, confidence
 
 
     def get_dataset_loss(self, session, context_path, qn_path, ans_path, dataset='dev'):
@@ -474,7 +475,7 @@ class QAModel(object):
             ans_path, self.FLAGS.h_batch_size,
             context_len=self.FLAGS.h_context_len, question_len=self.FLAGS.h_question_len, discard_long=False):
 
-            pred_start_pos, pred_end_pos = self.get_start_end_pos(session, batch)
+            pred_start_pos, pred_end_pos, _ = self.get_start_end_pos(session, batch)
 
             # Convert the start and end positions to lists length batch_size
             pred_start_pos = pred_start_pos.tolist() # list length batch_size

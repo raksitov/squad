@@ -20,6 +20,7 @@ from __future__ import division
 import os
 import io
 import json
+#import yaml
 import sys
 import logging
 
@@ -71,6 +72,7 @@ tf.app.flags.DEFINE_bool("use_bidaf", False, "Whether to use basic attention or 
 tf.app.flags.DEFINE_bool("use_rnn_for_ends", False, "Whether to use rnn for predicting span ends.")
 tf.app.flags.DEFINE_bool("share_encoder", True, "Whether to share weights for questions and answers encoding.")
 tf.app.flags.DEFINE_bool("reuse_question_states", False, "Whether to reuse RNN states for questions when encoding answers.")
+tf.app.flags.DEFINE_bool("ensemble", False, "Whether to evaluate ensemble of models.")
 
 # Overrides for hparams
 tf.app.flags.DEFINE_integer("batch_size", None, "Batch size override for eval")
@@ -210,20 +212,66 @@ def main(unused_argv):
         # Read the JSON data from file
         qn_uuid_data, context_token_data, qn_token_data = get_json_data(FLAGS.json_in_path)
 
-        with tf.Session(config=config) as sess:
+        if not FLAGS.ensemble:
+          with tf.Session(config=config) as sess:
 
             # Load model from ckpt_load_dir
             initialize_model(sess, qa_model, FLAGS.ckpt_load_dir, expect_exists=True)
 
             # Get a predicted answer for each example in the data
             # Return a mapping answers_dict from uuid to answer
-            answers_dict = generate_answers(sess, qa_model, word2id, qn_uuid_data, context_token_data, qn_token_data)
+            answers_dict, _ = generate_answers(sess, qa_model, word2id, qn_uuid_data, context_token_data, qn_token_data)
 
             # Write the uuid->answer mapping a to json file in root dir
             print "Writing predictions to %s..." % FLAGS.json_out_path
             with io.open(FLAGS.json_out_path, 'w', encoding='utf-8') as f:
-                f.write(unicode(json.dumps(answers_dict, ensure_ascii=False)))
-                print "Wrote predictions to %s" % FLAGS.json_out_path
+              f.write(unicode(json.dumps(answers_dict, ensure_ascii=False)))
+              print "Wrote predictions to %s" % FLAGS.json_out_path
+        else:
+          ckpts = FLAGS.ckpt_load_dir.split(',')
+          data = []
+
+          class AttrDict(dict):
+            def __init__(self, *args, **kwargs):
+              super(AttrDict, self).__init__(*args, **kwargs)
+              self.__dict__ = self
+
+          for idx, ckpt in enumerate(ckpts):
+            print 'Currently processing model number {}'.format(idx)
+            with open(os.path.join(ckpt, "flags.json")) as reader:
+              #flags = yaml.safe_load(reader)
+              flags_utf = json.load(reader)
+            def from_utf(utf_string):
+              try:
+                return utf_string.encode('utf-8')
+              except:
+                return utf_string
+            flags = {from_utf(key) : from_utf(flags_utf[key]) for key in flags_utf}
+            flags = AttrDict(flags)
+            flags.h_batch_size = FLAGS.batch_size
+            flags.h_answer_len = FLAGS.answer_len
+            tf.reset_default_graph()
+            qa_model = QAModel(flags, id2word, word2id, emb_matrix)
+            qn_uuid_data, context_token_data, qn_token_data = get_json_data(FLAGS.json_in_path)
+            with tf.Session(config=config) as sess:
+              initialize_model(sess, qa_model, ckpt, expect_exists=True)
+              answers_dict, confidence_dict = generate_answers(sess, qa_model, word2id, qn_uuid_data, context_token_data, qn_token_data)
+              data.append((answers_dict, confidence_dict))
+          answers_dict = {}
+          for uuid in data[0][0]:
+            best = data[0][0][uuid]
+            best_conf = data[0][1][uuid]
+            best_dict = {best : best_conf}
+            for ans, conf in data[1:]:
+              best_dict[ans[uuid]] = best_dict.get(ans[uuid], 0.) + conf[uuid]
+              if best_dict[ans[uuid]] > best_conf:
+                best_conf = best_dict[ans[uuid]]
+                best = ans[uuid]
+            answers_dict[uuid] = best
+          print "Writing predictions to %s..." % FLAGS.json_out_path
+          with io.open(FLAGS.json_out_path, 'w', encoding='utf-8') as f:
+            f.write(unicode(json.dumps(answers_dict, ensure_ascii=False)))
+            print "Wrote predictions to %s" % FLAGS.json_out_path
 
 
     else:
