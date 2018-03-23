@@ -238,6 +238,7 @@ def generate_answers(session, model, word2id, qn_uuid_data, context_token_data, 
       uuid2ans: dictionary mapping uuid (string) to predicted answer (string; detokenized)
     """
     uuid2ans = {} # maps uuid to string containing predicted answer
+    uuid2conf = {}
     data_size = len(qn_uuid_data)
     num_batches = ((data_size-1) / model.FLAGS.h_batch_size) + 1
     batch_num = 0
@@ -250,14 +251,15 @@ def generate_answers(session, model, word2id, qn_uuid_data, context_token_data, 
         model.FLAGS.h_question_len):
 
         # Get the predicted spans
-        pred_start_batch, pred_end_batch = model.get_start_end_pos(session, batch)
+        pred_start_batch, pred_end_batch, confidence = model.get_start_end_pos(session, batch, need_confidence=True)
 
         # Convert pred_start_batch and pred_end_batch to lists length batch_size
         pred_start_batch = pred_start_batch.tolist()
         pred_end_batch = pred_end_batch.tolist()
+        confidence_batch = confidence.tolist()
 
         # For each example in the batch:
-        for ex_idx, (pred_start, pred_end) in enumerate(zip(pred_start_batch, pred_end_batch)):
+        for ex_idx, (pred_start, pred_end, conf) in enumerate(zip(pred_start_batch, pred_end_batch, confidence_batch)):
 
             # Original context tokens (no UNKs or padding) for this example
             context_tokens = batch.context_tokens[ex_idx] # list of strings
@@ -272,6 +274,7 @@ def generate_answers(session, model, word2id, qn_uuid_data, context_token_data, 
             # Detokenize and add to dict
             uuid = batch.uuids[ex_idx]
             uuid2ans[uuid] = detokenizer.detokenize(pred_ans_tokens, return_str=True)
+            uuid2conf[uuid] = conf
 
         batch_num += 1
 
@@ -280,4 +283,4 @@ def generate_answers(session, model, word2id, qn_uuid_data, context_token_data, 
 
     print "Finished generating answers for dataset."
 
-    return uuid2ans
+    return uuid2ans, uuid2conf
