@@ -1,4 +1,7 @@
-# cs224n-win18-squad
-Code for the Default Final Project (SQuAD) for [CS224n](http://web.stanford.edu/class/cs224n/), Winter 2018
+# squad
 
-Note: this code is adapted in part from the [Neural Language Correction](https://github.com/stanfordmlgroup/nlc/) code by the Stanford Machine Learning Group.
+The code for Stanford's CS224n ("Natural Language Processing with Deep Learning") default final
+project. In this project I am building deep learning system for reading comprehension in Stanford
+Question Answering Dataset (SquAD). The code is adapted in part from the
+[Neural Language Correction](https://github.com/stanfordmlgroup/nlc/) code by the Stanford Machine
+Learning Group.
