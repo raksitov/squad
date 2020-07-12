@@ -11,5 +11,5 @@ Machine Learning Group.
 
 I trained a single model that achieved **76.37** F1 and **66.00** EM on dev dataset and
 ensemble of 12 models that achieved **80.044** F1 and **71.971** EM on test dataset. The
-ensemble model got 6th place (out of 100+ teams / submossions) on the class leaderboard
+ensemble model got 6th place (out of 100+ teams / submissions) on the class leaderboard
 (see _TestLeaderboard.jpg_ for the snapshot of the leaderboard)
